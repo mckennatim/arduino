@@ -31,7 +31,7 @@ String tempstr = "";
 String setptstr;
 String relaystr;
 String ostr = "";
-int sid[7];
+//String sidstr;
 int temp[7];
 int setpt[7];
 int relay[7];
@@ -120,6 +120,7 @@ void  updateSetpts(){
     char *strings[pslen];
     char delims[] = ",";
     int k = 0;
+    //repeated calls to this function modifies string s1 by breaking it into "tokens"--that is the string is broken into substrings, each terminating with a '\0', where the '\0' replaces any characters contained in string s2. The first call uses the string to be tokenized as s1; subsequent calls use NULL as the first argument. A pointer to the beginning of the current token is returned; NULL is returned if there are no more tokens.
     strings[k] = strtok( ps, delims );
     while( strings[k] != NULL  ) 
     {
@@ -135,10 +136,10 @@ void  updateSetpts(){
     for ( int j = 0; j < datapts; j++ ) 
     {
     	//Serial.println(strings[j]);
-    	ss =strings[j];
-    	idx= ss.substring(0,1).toInt();
-    	if (idx<nc && idx>-1){//if new data is for sensors in play
-	     	curVal = EEPROM.read(idx+mb);
+    	ss =strings[j]; //ss declared as String!!
+    	idx= ss.substring(0,1).toInt();//first character is the sensor id
+    	if (idx<nc && idx>-1){//if new data is for sensors in play (nc=number of circuits)
+	     	curVal = EEPROM.read(idx+mb);//each location stores a byte
 	    	//Serial.println(curVal);        
 	        newVal= ss.substring(1,4).toInt();
 	    	//Serial.println(newVal); 
@@ -210,7 +211,22 @@ void readTemps(){
       delay(1000);     // maybe 750ms is enough, maybe not
       // we might do a ds.depower() here, but the reset will take care of it.
       present = ds.reset();
-      ds.select(addr);    
+      ds.select(addr);  
+          //char* str = "Hello";
+          char dest[9];
+           
+          //strcpy( dest, str );
+          //strcat( dest, ".txt" );
+          //dest[1]='o';
+          //Serial.print(dest);
+      //char ccas[24];
+      //char cas[3];
+	    for( i = 0; i < 8; i++) {
+	    	    dest[i] = String(addr[i], HEX)[0];
+	    	    //as.toCharArray(cas,3);
+                    //ccas[2*i] = cas[1];	    	    
+	    } 
+	    Serial.print(dest);   
       ds.write(0xBE);         // Read Scratchpad
       Serial.print("  Data = ");
       Serial.print(present,HEX);
@@ -334,6 +350,7 @@ void sendData() {
   }
    // note the time that the connection was made or attempted:
 }
+
 
 
 
