@@ -26,7 +26,8 @@ const int LOCLU = 100;
 const int LOCSETPTS = 10;
 const int LOCNUMCKTS =5;
 int ctr = 0;
-int numckts; //num circuits in this setup	
+int numckts; //num circuits in this setup reporting
+int datapts; //num setpoints being sent from server
 int numread; //num ckts read this time through
 char lu[MAXCKTS][9]; //max sensors is 12, sensor id is 8 bytes + \0
 char clu[MAXCKTS][9]; //max sensors is 12, sensor id is 8 bytes + \0
@@ -47,24 +48,24 @@ char c1[2]; //a characer sting to hold c data
 boolean keepReading = false; //initialize
 
 int relay[MAXCKTS];
-int repin[] = {33,35,37,39};
+int repin[] = {33,35,37,39,40,41,42,43,44,45,46,47};
 
 void setup() 
 {
-  // start serial port:
-  Serial.begin(9600);
-  if (Ethernet.begin(mac) == 0) {
-    Serial.println("Failed to configure Ethernet using DHCP");
-    // DHCP failed, so use a fixed IP address:
-    Ethernet.begin(mac, ip);
-  }  
- EEPROM_readStruc(LOCLU, lu);  
- EEPROM_readStruc(LOCNUMCKTS, numckts);  
- EEPROM_readStruc(LOCSETPTS, setpts);  
- Serial.println();  
- Serial.println(lu[1]);
- Serial.println(numckts);
- Serial.println(setpts[1]);  	
+	// start serial port:
+	Serial.begin(9600);
+	if (Ethernet.begin(mac) == 0) {
+	Serial.println("Failed to configure Ethernet using DHCP");
+	// DHCP failed, so use a fixed IP address:
+	Ethernet.begin(mac, ip);
+	}  
+	EEPROM_readStruc(LOCLU, lu);  
+	EEPROM_readStruc(LOCNUMCKTS, numckts);  
+	EEPROM_readStruc(LOCSETPTS, setpts);  
+	Serial.println();  
+	Serial.println(lu[1]);
+	Serial.println(numckts);
+	Serial.println(setpts[1]);  	
     for (int j=0;j<numckts;j++ ){
         pinMode(repin[j], OUTPUT);  
     } 
@@ -119,59 +120,66 @@ void getClientData(){
 }
 
 void  updateSetpts(){
-    Serial.println("in update setpts");	
-    Serial.println(cdata); 
-    int datapts;
-    String ss;
-    int newVal;
-    int curVal;
-    int idx;
-  int pslen = strlen(cdata)-2;
-  Serial.print(pslen);
-  Serial.println(" is the length of readString");
-  if(pslen>4){
-    ///*
-    char ps[pslen];
-    for (int i = 1; i<pslen+1; i++){
-        //Serial.print(readString.charAt(i));
-        ps[i-1]=cdata[i];
-    }  
-    Serial.println(ps);
-    char *strings[pslen];
-    char delims[] = ",";
-    int k = 0;
-    strings[k] = strtok( ps, delims );
-    while( strings[k] != NULL  ) 
-    {
-        strings[++k] = strtok( NULL, delims );          
-    }
-    datapts=k;
-    for ( int j = 0; j < datapts; j++ ) 
-    {
-        //Serial.println(strings[j]);
-        ss =strings[j];
-        idx= ss.substring(0,1).toInt()-1;
-        if (idx>-1){//assumes  data is in order 
-        	//and in the form[1160,2161,3162,4163,5164,6156] <numckts &&
-            curVal = EEPROM.read(idx+LOCSETPTS);
-            //Serial.println(curVal);        
-            newVal= ss.substring(1,4).toInt();
-            //Serial.println(newVal); 
-            if(curVal != newVal){
-                Serial.println("not the same");
-                EEPROM.write(idx+LOCSETPTS, newVal);
-                delay(10);
-                setpts[j] = newVal;				
-            }  else{
-                setpts[j] = curVal;
-                Serial.println("newVal is same as curVal");
-            }		
-        }else {
-          Serial.println("sensor not implemented");
-        }
-        Serial.println(setpts[j]);
-    }   
-  }
+	Serial.println("in update setpts");	
+	Serial.println(cdata); 
+	//int datapts;
+	char ss[5];
+	//char ssData[4] ="123";
+	int newVal;
+	int curVal;
+	int idx;
+	int pslen = strlen(cdata)-4;//take off <[]>
+	Serial.print(pslen);
+	Serial.println(" is the length of readString");
+	for ( int h = 0; h < MAXCKTS; h++ ) 
+	{
+		setpts[h]=EEPROM.read(h+LOCSETPTS);
+	}    
+	if(pslen>4){
+		char ps[pslen];
+		for (int i = 2; i<pslen+2; i++){//cdata starts <[, skip them;
+		    ps[i-2]=cdata[i];//but start ps index at 0
+		}  
+		Serial.println(ps);
+		char *strings[pslen];
+		char delims[] = ",";
+		int k = 0;
+		strings[k] = strtok( ps, delims );
+		while( strings[k] != NULL  ) 
+		{
+		    strings[++k] = strtok( NULL, delims );          
+		}
+		datapts=k;//the number of settings sent
+		for ( int j = 0; j < datapts; j++ ) 
+		{
+			//Serial.println(strings[j]);
+			strcpy(ss, strings[j]);
+			//Serial.println(ss);
+		    idx= ss[0] - '0' -1;
+		    if (idx>-1){//assumes  data is in order 
+		    	//and in the form[1160,2161,3162,4163,5164,6156] <numckts &&
+		        curVal = setpts[idx];
+		        //Serial.println(curVal);  
+		        char ssData[4];
+				memcpy( ssData, &ss[1], 3 );
+				ssData[3] = '\0';
+		        //ssData = "123";          
+		        newVal= atoi	(ssData);
+		        //Serial.println(newVal); 
+		        if(curVal != newVal){
+		            Serial.println("not the same");
+		            EEPROM.write(idx+LOCSETPTS, newVal);
+		            delay(10);
+		            setpts[idx] = newVal;				
+		        }  else{
+		            Serial.println("newVal is same as curVal");
+		        }		
+		    }else {
+		      Serial.println("sensor not implemented");
+		    }
+		    Serial.println(setpts[idx]);
+		}   
+	}
 }
 
 void getSensorIds(){
@@ -198,8 +206,6 @@ void getSensorIds(){
 
 void readTemps(){ 
 	Serial.println("in readTemps");
-	//tempstr = "\"temperatures\": \"Device is not a DS18x20 family device.\"";
-	//*
 	byte i;
 	byte present = 0;
 	byte type_s;
@@ -296,9 +302,9 @@ void readTemps(){
 void orderTemps(){
 	Serial.println("in orderTemps");
 	int j =0;
-    for (int k=0; k<numckts; k++){
-    	    Serial.println(clu[j]);
-        	Serial.println(lu[k]);
+    for (int k=0; k<MAXCKTS; k++){
+    	   // Serial.println(clu[j]);
+        	//Serial.println(lu[k]);
         if (!strcmp(clu[j], lu[k])){
         	temps[k]=temp[j];
         	j++;
@@ -306,14 +312,14 @@ void orderTemps(){
         	Serial.println("different");
         	temps[k]=0;
         }
-        Serial.println(temps[k]);        
+        //Serial.println(temps[k]);        
     }		
 }
 
 void setRelays(){
     ///*
     Serial.println("in setRelays");
-    for (int k=0;k<numckts;k++ ){	
+    for (int k=0;k<MAXCKTS;k++ ){	
         if(temps[k]>setpts[k]*2) {//if temps reached setpoint, or not valid reading
             relay[k]=0;//record new state
             digitalWrite(repin[k], LOW); //turn off zone
@@ -331,7 +337,7 @@ void setRelays(){
         //relaystr = relaystr + relay[k]+ ", ";	
         //String rt = "temp";
         //rt += k; rt+=" is "; rt+=temp[k]; rt+=", setpt-delay=";rt+=setpt[k]*2 - hyst[k];
-        Serial.println(relay[k]);
+        //Serial.println(relay[k]);
         //Serial.println('temp'+ k +'is ' + temp[k] + ', setpt - delay = '+ setpt[k]*2 - hyst[k]) 
     }
     //relaystr = relaystr.substring(0,relaystr.length()-2);//strip the last ,
@@ -347,15 +353,17 @@ void assembleData(){
     //jlen = jsn.length();
     Serial.println("in assembleData");
     char subst[70] = " ";
-    array2json(subst, temps, numckts, "temp");
+    array2json(subst, temps, MAXCKTS, "temp");
     Serial.println(subst);
     sprintf(jsn, "%s%s, ",jsn,subst);
     subst[0] = '\0';
-    array2json(subst, relay, numckts, "relay");
+    array2json(subst, relay, MAXCKTS, "relay");
     Serial.println(subst);
     sprintf(jsn, "%s%s, ",jsn,subst);
     subst[0] = '\0';
-    array2json(subst, setpts, numckts, "setpt");
+    Serial.println(subst);
+    //Serial.println(printf("num of datapts = %d", datapts ));
+    array2json(subst, setpts, MAXCKTS, "setpt");
     Serial.println(subst);
     sprintf(jsn, "%s%s, ",jsn,subst);
     subst[0] = '\0'; 
@@ -368,13 +376,13 @@ void assembleData(){
 
 void array2json(char *s, int vali[], int ns, char name[] ){
   Serial.println("in array2json");
-  Serial.println(vali[2]);
+  //Serial.println(vali[2]);
     sprintf(s, "\"%s\": [", name);
     for (i=0; i < ns; i++){
       sprintf(s, "%s%d, ",s,vali[i]);  
     }
     int sl = strlen(s);
-    Serial.println(sl);
+    //Serial.println(sl);
     s[sl-2] = '\0';
     Serial.println(sl);
     sprintf(s, "%s]",s);
