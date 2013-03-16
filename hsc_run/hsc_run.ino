@@ -66,38 +66,38 @@ void setup()
 	Serial.println(lu[1]);
 	Serial.println(numckts);
 	Serial.println(setpts[1]);  	
-    for (int j=0;j<numckts;j++ ){
-        pinMode(repin[j], OUTPUT);  
-    } 
+	for (int j=0;j<MAXCKTS;j++ ){
+		pinMode(repin[j], OUTPUT);  
+	} 
 }
 
 void loop() {
   // if there's incoming data from the net connection.
-    getClientData();
+	getClientData();
 
   // if there's no net connection, but there was one last time
   // through the loop, then stop the client:
   if (!client.connected() && lastConnected) {
-    Serial.println();
-    Serial.println("disconnecting.");
-    client.stop();
+	Serial.println();
+	Serial.println("disconnecting.");
+	client.stop();
   }
   // if you're not connected, and ten seconds have passed since
   // your last connection, then connect again and send data:
   if(!client.connected() && (millis() - lastConnectionTime > postingInterval)) {
-    Serial.println("meets conditions");
-    Serial.println("DOGSHIT ----------------------------------------------------");
-    Serial.println(cdata);
-    Serial.println();
-    updateSetpts();
-    cdata[0]='\0';
-    getSensorIds();
-    readTemps();
-    orderTemps();    
-    setRelays(); 
-    assembleData();
-    sendData(); 
-    lastConnectionTime = millis();    
+	Serial.println("meets conditions");
+	Serial.println(" ----------------------------------------------------");
+	Serial.println(cdata);
+	Serial.println();
+	updateSetpts();
+	cdata[0]='\0';
+	getSensorIds();
+	readTemps();
+	orderTemps();    
+	setRelays(); 
+	assembleData();
+	sendData(); 
+	lastConnectionTime = millis();    
   }
   // store the state of the connection for next time through
   // the loop:
@@ -105,103 +105,95 @@ void loop() {
 }
 
 void getClientData(){
-    if (client.available()) {
-        char c = client.read();
-        Serial.print(c);
-        //*
-        if(c=='<'){keepReading=true;}
-        if (keepReading){
-            c1[0]=c;
-          strcat(cdata, c1);
-        }
-        if(c=='>'){keepReading=false;}	
-        //*/
-    }	
+	if (client.available()) {
+		char c = client.read();
+		Serial.print(c);
+		//*
+		if(c=='<'){keepReading=true;}
+		if (keepReading){
+			c1[0]=c;
+		  strcat(cdata, c1);
+		}
+		if(c=='>'){keepReading=false;}	
+		//*/
+	}	
 }
 
 void  updateSetpts(){
 	Serial.println("in update setpts");	
-	Serial.println(cdata); 
+	Serial.println(cdata); //cdata must look like <[166,0,0,0,162,0,156,0,0,0,0,0]>
 	//int datapts;
-	char ss[5];
-	//char ssData[4] ="123";
+	char ssData[4]; //"123"+/0;
 	int newVal;
 	int curVal;
 	int idx;
-	int pslen = strlen(cdata)-4;//take off <[]>
+	int pslen = strlen(cdata)-4;//take off <[]>	
 	Serial.print(pslen);
 	Serial.println(" is the length of readString");
-	for ( int h = 0; h < MAXCKTS; h++ ) 
-	{
+	for ( int h = 0; h < MAXCKTS; h++ ) {
 		setpts[h]=EEPROM.read(h+LOCSETPTS);
 	}    
 	if(pslen>4){
 		char ps[pslen];
 		for (int i = 2; i<pslen+2; i++){//cdata starts <[, skip them;
-		    ps[i-2]=cdata[i];//but start ps index at 0
+			ps[i-2]=cdata[i];//but start ps index at 0
 		}  
 		Serial.println(ps);
 		char *strings[pslen];
 		char delims[] = ",";
 		int k = 0;
 		strings[k] = strtok( ps, delims );
-		while( strings[k] != NULL  ) 
-		{
-		    strings[++k] = strtok( NULL, delims );          
+		while( strings[k] != NULL  ) {
+			strings[++k] = strtok( NULL, delims );          
 		}
-		datapts=k;//the number of settings sent
-		for ( int j = 0; j < datapts; j++ ) 
+		for ( int j = 0; j < MAXCKTS; j++ ) 
 		{
 			//Serial.println(strings[j]);
-			strcpy(ss, strings[j]);
-			//Serial.println(ss);
-		    idx= ss[0] - '0' -1;
-		    if (idx>-1){//assumes  data is in order 
-		    	//and in the form[1160,2161,3162,4163,5164,6156] <numckts &&
-		        curVal = setpts[idx];
-		        //Serial.println(curVal);  
-		        char ssData[4];
-				memcpy( ssData, &ss[1], 3 );
-				ssData[3] = '\0';
-		        //ssData = "123";          
-		        newVal= atoi	(ssData);
-		        //Serial.println(newVal); 
-		        if(curVal != newVal){
-		            Serial.println("not the same");
-		            EEPROM.write(idx+LOCSETPTS, newVal);
-		            delay(10);
-		            setpts[idx] = newVal;				
-		        }  else{
-		            Serial.println("newVal is same as curVal");
-		        }		
-		    }else {
-		      Serial.println("sensor not implemented");
-		    }
-		    Serial.println(setpts[idx]);
+			char ssData[4];			
+			strcpy(ssData, strings[j]);
+			//memcpy( ssData, &ss[1], 3 );
+			//ssData[3] = '\0';
+			//ssData = "123";          
+			newVal= atoi	(ssData);
+			Serial.print(newVal); 
+			curVal = setpts[j];
+			Serial.print("<-new|old->");
+			Serial.println(curVal);
+			Serial.print(j);	        
+			if(curVal != newVal && newVal > 0){
+				Serial.print(" Server has sent new value, setpt changed to ");
+				EEPROM.write(j+LOCSETPTS, newVal);
+				delay(10);
+				setpts[j] = newVal;				
+			}  else{
+				Serial.print(" newVal is same as curVal or is 0, stays at ");
+			}		
+			Serial.println(setpts[j]);
 		}   
 	}
 }
 
 void getSensorIds(){
-    Serial.println("in getSensorIds");
-    ds.reset(); 
-    ctr = 0;
-    while ( ds.search(addr)){ 
-        char dest[9];
-        for( i = 0; i < 8; i++) {
-        	dest[i] = String(addr[i], HEX)[0];	    
-        } 
-        dest[i] ='\0';//add terminator
-        strcpy(clu[ctr], dest);
-        Serial.print(clu[ctr]);  
-        Serial.println(); 
-        Serial.print(strlen(clu[ctr])); 
-        Serial.println();    
-        Serial.print(ctr);
-        Serial.println();   
-      ctr++;
-      ds.select(addr);  
-    }   			
+	Serial.println("in getSensorIds");
+	ds.reset(); 
+	delay(200);
+	ctr = 0;
+	while ( ds.search(addr)){ 
+		char dest[9];
+		for( i = 0; i < 8; i++) {
+			dest[i] = String(addr[i], HEX)[0];	    
+		} 
+		dest[i] ='\0';//add terminator
+		strcpy(clu[ctr], dest);
+		Serial.print(clu[ctr]);  
+		Serial.print(" sensor ID is "); 
+		Serial.print(strlen(clu[ctr])); 
+		Serial.print(" long  with indx of ");    
+		Serial.print(ctr);
+		Serial.println();   
+	  ctr++;
+	  ds.select(addr);  
+	}   			
 }
 
 void readTemps(){ 
@@ -217,17 +209,17 @@ void readTemps(){
 	while ( ds.search(addr)){      
 		Serial.print("ROM =");
 		for( i = 0; i < 8; i++) {
-		    Serial.write(' ');
-		    Serial.print(addr[i], HEX);
+			Serial.write(' ');
+			Serial.print(addr[i], HEX);
 		}
-        if (OneWire::crc8(addr, 7) != addr[7]) {
+		if (OneWire::crc8(addr, 7) != addr[7]) {
 			Serial.println("CRC is not valid!");
 			//tempstr = "\"temp\": \"CRC is not valid!\"";
 			return;
-        }
-        Serial.println();
-        // the first ROM byte indicates which chipi
-        switch (addr[0]) {
+		}
+		Serial.println();
+		// the first ROM byte indicates which chipi
+		switch (addr[0]) {
 			case 0x10:
 				Serial.println("  Chip = DS18S20");  // or old DS1820
 				type_s = 1;
@@ -268,17 +260,17 @@ void readTemps(){
 		unsigned int raw = (data[1] << 8) | data[0];
 		if (type_s) {
 			raw = raw << 3; // 9 bit resolution default
-        	if (data[7] == 0x10) {
-          	// count remain gives full 12 bit resolution
-          	raw = (raw & 0xFFF0) + 12 - data[6];
-        }
-      	} else {
-        	byte cfg = (data[4] & 0x60);
-        	if (cfg == 0x00) raw = raw << 3;  // 9 bit resolution, 93.75 ms
-        	else if (cfg == 0x20) raw = raw << 2; // 10 bit res, 187.5 ms
-        	else if (cfg == 0x40) raw = raw << 1; // 11 bit res, 375 ms
-        	// default is 12 bit resolution, 750 ms conversion time
-      	}
+			if (data[7] == 0x10) {
+			// count remain gives full 12 bit resolution
+			raw = (raw & 0xFFF0) + 12 - data[6];
+		}
+		} else {
+			byte cfg = (data[4] & 0x60);
+			if (cfg == 0x00) raw = raw << 3;  // 9 bit resolution, 93.75 ms
+			else if (cfg == 0x20) raw = raw << 2; // 10 bit res, 187.5 ms
+			else if (cfg == 0x40) raw = raw << 1; // 11 bit res, 375 ms
+			// default is 12 bit resolution, 750 ms conversion time
+		}
 		// divide raw/16 for celsius and *9/5+32 for F but do it on sitebuilt
 		//appends raw to json
 		temp[ctr]=raw;
@@ -288,139 +280,139 @@ void readTemps(){
 		//do any formatting and float stuff on sitebuilt server
 	} //end of while loop
 	numread=ctr;
-    //out of while loop, no more addresses to read
+	//out of while loop, no more addresses to read
 	Serial.println(numread);
-    Serial.println("No more addresses.");
-    Serial.println();
-    //tempstr = tempstr.substring(0,tempstr.length()-2);//strip the last ,
-    //tempstr = "\"temp\": [" +tempstr + "]";
-    //Serial.println(tempstr);	
-    //*/
-    //tempstr = "\"temp\": [356, 344 ]";	
+	Serial.println("No more addresses.");
+	Serial.println();
+	//tempstr = tempstr.substring(0,tempstr.length()-2);//strip the last ,
+	//tempstr = "\"temp\": [" +tempstr + "]";
+	//Serial.println(tempstr);	
+	//*/
+	//tempstr = "\"temp\": [356, 344 ]";	
 } 
 
 void orderTemps(){
 	Serial.println("in orderTemps");
 	int j =0;
-    for (int k=0; k<MAXCKTS; k++){
-    	   // Serial.println(clu[j]);
-        	//Serial.println(lu[k]);
-        if (!strcmp(clu[j], lu[k])){
-        	temps[k]=temp[j];
-        	j++;
-        } else{
-        	Serial.println("different");
-        	temps[k]=0;
-        }
-        //Serial.println(temps[k]);        
-    }		
+	for (int k=0; k<MAXCKTS; k++){
+		   // Serial.println(clu[j]);
+			//Serial.println(lu[k]);
+		if (!strcmp(clu[j], lu[k])){
+			temps[k]=temp[j];
+			j++;
+		} else{
+			Serial.println("different");
+			temps[k]=0;
+		}
+		//Serial.println(temps[k]);        
+	}		
 }
 
 void setRelays(){
-    ///*
-    Serial.println("in setRelays");
-    for (int k=0;k<MAXCKTS;k++ ){	
-        if(temps[k]>setpts[k]*2) {//if temps reached setpoint, or not valid reading
-            relay[k]=0;//record new state
-            digitalWrite(repin[k], LOW); //turn off zone
-        }
-        if(temps[k]<setpts[k]*2-hyst[k]) {
-            relay[k]=1;//record new state
-            digitalWrite(repin[k], HIGH); //turn on zone	
-        if (temps[k]==0){
-            relay[k]=0;//record new state
-            digitalWrite(repin[k], LOW); //turn off zone        	
-        }    		
-        }else { //read current state
-        relay[k] = digitalRead(repin[k]);
-        }//if temp between those points don't do anything	
-        //relaystr = relaystr + relay[k]+ ", ";	
-        //String rt = "temp";
-        //rt += k; rt+=" is "; rt+=temp[k]; rt+=", setpt-delay=";rt+=setpt[k]*2 - hyst[k];
-        //Serial.println(relay[k]);
-        //Serial.println('temp'+ k +'is ' + temp[k] + ', setpt - delay = '+ setpt[k]*2 - hyst[k]) 
-    }
-    //relaystr = relaystr.substring(0,relaystr.length()-2);//strip the last ,
-    //relaystr = "\"relay\": [" +relaystr + "]";
-    //Serial.println(relaystr);		
-    //*/
-     //relaystr = "\"relay\": [1, 0]";	   
+	///*
+	Serial.println("in setRelays");
+	for (int k=0;k<MAXCKTS;k++ ){	
+		if(temps[k]>setpts[k]*2) {//if temps reached setpoint, or not valid reading
+			relay[k]=0;//record new state
+			digitalWrite(repin[k], LOW); //turn off zone
+		}
+		if(temps[k]<setpts[k]*2-hyst[k]) {
+			relay[k]=1;//record new state
+			digitalWrite(repin[k], HIGH); //turn on zone	
+		if (temps[k]==0){
+			relay[k]=0;//record new state
+			digitalWrite(repin[k], LOW); //turn off zone        	
+		}    		
+		}else { //read current state
+		relay[k] = digitalRead(repin[k]);
+		}//if temp between those points don't do anything	
+		//relaystr = relaystr + relay[k]+ ", ";	
+		//String rt = "temp";
+		//rt += k; rt+=" is "; rt+=temp[k]; rt+=", setpt-delay=";rt+=setpt[k]*2 - hyst[k];
+		//Serial.println(relay[k]);
+		//Serial.println('temp'+ k +'is ' + temp[k] + ', setpt - delay = '+ setpt[k]*2 - hyst[k]) 
+	}
+	//relaystr = relaystr.substring(0,relaystr.length()-2);//strip the last ,
+	//relaystr = "\"relay\": [" +relaystr + "]";
+	//Serial.println(relaystr);		
+	//*/
+	 //relaystr = "\"relay\": [1, 0]";	   
 }
 
 //{"data": {"temp": [322, 302], "relay": [0, 1 ], "setpt": [166, 167]}}
 void assembleData(){
-    //jsn = "{\"data\": {" + tempstr + ", " + setptstr + ", " + relaystr + "}}";
-    //jlen = jsn.length();
-    Serial.println("in assembleData");
-    char subst[70] = " ";
-    array2json(subst, temps, MAXCKTS, "temp");
-    Serial.println(subst);
-    sprintf(jsn, "%s%s, ",jsn,subst);
-    subst[0] = '\0';
-    array2json(subst, relay, MAXCKTS, "relay");
-    Serial.println(subst);
-    sprintf(jsn, "%s%s, ",jsn,subst);
-    subst[0] = '\0';
-    Serial.println(subst);
-    //Serial.println(printf("num of datapts = %d", datapts ));
-    array2json(subst, setpts, MAXCKTS, "setpt");
-    Serial.println(subst);
-    sprintf(jsn, "%s%s, ",jsn,subst);
-    subst[0] = '\0'; 
-    jlen = strlen(jsn);
-    jsn[jlen-2] = '\0';
-    sprintf(jsn, "%s}}",jsn);
-    Serial.println(jsn);
+	//jsn = "{\"data\": {" + tempstr + ", " + setptstr + ", " + relaystr + "}}";
+	//jlen = jsn.length();
+	Serial.println("in assembleData");
+	char subst[70] = " ";
+	array2json(subst, temps, MAXCKTS, "temp");
+	Serial.println(subst);
+	sprintf(jsn, "%s%s, ",jsn,subst);
+	subst[0] = '\0';
+	array2json(subst, relay, MAXCKTS, "relay");
+	Serial.println(subst);
+	sprintf(jsn, "%s%s, ",jsn,subst);
+	subst[0] = '\0';
+	Serial.println(subst);
+	//Serial.println(printf("num of datapts = %d", datapts ));
+	array2json(subst, setpts, MAXCKTS, "setpt");
+	Serial.println(subst);
+	sprintf(jsn, "%s%s, ",jsn,subst);
+	subst[0] = '\0'; 
+	jlen = strlen(jsn);
+	jsn[jlen-2] = '\0';
+	sprintf(jsn, "%s}}",jsn);
+	Serial.println(jsn);
 
 }
 
 void array2json(char *s, int vali[], int ns, char name[] ){
   Serial.println("in array2json");
   //Serial.println(vali[2]);
-    sprintf(s, "\"%s\": [", name);
-    for (i=0; i < ns; i++){
-      sprintf(s, "%s%d, ",s,vali[i]);  
-    }
-    int sl = strlen(s);
-    //Serial.println(sl);
-    s[sl-2] = '\0';
-    Serial.println(sl);
-    sprintf(s, "%s]",s);
+	sprintf(s, "\"%s\": [", name);
+	for (i=0; i < ns; i++){
+	  sprintf(s, "%s%d, ",s,vali[i]);  
+	}
+	int sl = strlen(s);
+	//Serial.println(sl);
+	s[sl-2] = '\0';
+	Serial.println(sl);
+	sprintf(s, "%s]",s);
 }
 
 
 void sendData() {
   // if there's a successful connection:
   if (client.connect(cosmserver, 80)) {
-    Serial.println("connecting...");
-    // send the HTTP PUT request:
-    client.print("PUT /hsc/feed/80302");
-    //client.print(FEEDID);
-    client.println(" HTTP/1.1");
-    client.println("Host: api.cosm.com");
-    client.print("X-ApiKey: ");
-    client.println(APIKEY);
-    client.print("User-Agent: ");
-    client.println(USERAGENT);
-    client.print("Content-Length: ");
-    //char tempjsn[] = "{\"data\": {\"temp\": [322, 302], \"relay\": [0, 1 ], \"setpt\": [166, 167]}}";
-    jlen = strlen(jsn);
-    client.println(jlen);
-    // last pieces of the HTTP PUT request:
-    client.println("Content-Type: application/json");
-    client.println("Connection: close");
-    client.println();
-    client.println(jsn);
-        client.println();
-            client.println();
-        jsn[10]='\0';         
+	Serial.println("connecting...");
+	// send the HTTP PUT request:
+	client.print("PUT /hsc/feed/80302");
+	//client.print(FEEDID);
+	client.println(" HTTP/1.1");
+	client.println("Host: api.cosm.com");
+	client.print("X-ApiKey: ");
+	client.println(APIKEY);
+	client.print("User-Agent: ");
+	client.println(USERAGENT);
+	client.print("Content-Length: ");
+	//char tempjsn[] = "{\"data\": {\"temp\": [322, 302], \"relay\": [0, 1 ], \"setpt\": [166, 167]}}";
+	jlen = strlen(jsn);
+	client.println(jlen);
+	// last pieces of the HTTP PUT request:
+	client.println("Content-Type: application/json");
+	client.println("Connection: close");
+	client.println();
+	client.println(jsn);
+		client.println();
+			client.println();
+		jsn[10]='\0';         
   } 
   else {
-    // if you couldn't make a connection:
-    Serial.println("connection failed");
-    Serial.println();
-    Serial.println("disconnecting."); 
-    client.stop();
+	// if you couldn't make a connection:
+	Serial.println("connection failed");
+	Serial.println();
+	Serial.println("disconnecting."); 
+	client.stop();
   }
    // note the time that the connection was made or attempted:
 }

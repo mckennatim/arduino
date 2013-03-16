@@ -1,0 +1,15 @@
+=====version C - no more String class, everything indexed on MAXCKTS, new setpts in (simple)<JSONarray> =====
+:setup() starts the serial monitor and ethernet then reads from memory an array of sensor id's (char lu[MAXCKTS][9]), the numckts and an array of setpts[MAXCKTS] where 12 is MAXCKTS. It then assigns an array of pins as outputs (to relays not yet arrived from China)  
+
+:The main loop() begins zipping along taking in a character of incoming data on each loop and printing it to the serial monitor while grabbing characters if they come between < and > and storing them in a character array cdata[]
+::updateSetpts() then kicks in, first reading current setpt[] data from memory, and, as long as some data has come (strlen(cdata)-2>4) it loads up ps[] from cdata[] with everything inside <[]>. This incoming dat must be in the form <[0,0,0,0,0,0,0,0,0,167,0,0]> with MAXCKTS entries. 
+
+::strtok then breaks up that ps[] character array on the ',' and puts each setpt in an array of char arrays *strings[pslen] which gets indexed for each of the MAXCKTS setpt values coming in. Each is then atoi'd into an integer newVal which is compared with curVal and if(curVal != newVal && newVal > 0){ //not equal to each other and newVal isn't 0, then the newVal is written to memory and replaces the curVal.
+    cdata[0]='\0';
+    getSensorIds();
+    readTemps();
+    orderTemps();    
+    setRelays(); 
+    assembleData();
+    sendData(); 
+    lastConnectionTime = millis(); 
