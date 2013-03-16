@@ -1,4 +1,4 @@
-=====version C - no more String class, everything indexed on MAXCKTS, new setpts in (simple)<JSONarray> =====
+=====hsc-run: version C - no more String class, everything indexed on MAXCKTS, new setpts in (simple)<JSONarray> =====
 :setup() starts the serial monitor and ethernet then reads from memory an array of sensor id's (char lu[MAXCKTS][9]), the numckts and an array of setpts[MAXCKTS] where 12 is MAXCKTS. It then assigns an array of pins as outputs (to relays not yet arrived from China)  
 
 :The main loop() begins zipping along taking in a character of incoming data on each loop and printing it to the serial monitor while grabbing characters if they come between < and > and storing them in a character array cdata[]
