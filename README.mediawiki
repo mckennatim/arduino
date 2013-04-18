@@ -1,7 +1,9 @@
 back to [[electronics]]
 ===[[online heating system control project]]===
 http://[[homecontrol]].sitebuilt.net jquery-mobile app
-====deployment====
+====deployment - sensors for 7 zones live====
+:running hsc_run.ino and hscsetup.ino
+
 One wire sensors are known to be weird when connected in a star network of varying lengths < 100ft.
 See...
 :[http://openenergymonitor.org/emon/buildingblocks/DS18B20-temperature-sensing on one wire problems]
