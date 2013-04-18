@@ -1,4 +1,172 @@
-=====hsc-run: version C - no more String class, everything indexed on MAXCKTS, new setpts in (simple)<JSONarray> =====
+back to [[electronics]]
+===[[online heating system control project]]===
+http://[[homecontrol]].sitebuilt.net jquery-mobile app
+====deployment====
+One wire sensors are known to be weird when connected in a star network of varying lengths < 100ft.
+See...
+:[http://openenergymonitor.org/emon/buildingblocks/DS18B20-temperature-sensing on one wire problems]
+:[http://www.maximintegrated.com/app-notes/index.mvp/id/148 guidelines for relaiable 1 wire networks]
+In general if they can be found on search then they will work for reporting temperatures. So I unplugged sensors until I got a configuration that worked then put the rest in a second OneWire network ds1(26). and then modified the code to read the first network then the second. You can tell how a particular configuration does by running setup. Screwing the wires in sucks. Plugging them in is good.
+
+TODO:
+*get rid of swipe right/swipe left 
+*fix sort ordering
+*refresh on home
+*fix so not always LR
+
+====beta 0.1 - cleaned up colors, some testing on multiple devices====
+TODO: back to electronics. Build working relays. [http://arduino-info.wikispaces.com/ArduinoPower on relays]S
+
+====version I: ====
+on callback functions from things like $.get(... this.something doesn't refer back to the object method but must be explicitly referred to by like sys.somethhing
+
+====version H: titeObj -time temp array: display, sort, clear, edit  ====
+TODO:create a datObj. Arrays/objects push/slice/delete
+
+All the functions and data are encapsulated. A coulple of 'this' problems were solved by replacing this. with titeObj.
+
+My kind of oops: http://www.javascriptkit.com/javatutors/oopjs.shtml
+
+====version G: tempA -time temp array: display, sort, clear, edit  ====
+(TODO: flesh out the program data structure) OK now I know at least about the tempA array
+    0: Object
+    temp: "69"
+    time: "00:45"
+    __proto__: Object
+    1: Object
+    temp: "69"
+    time: "09:45"
+    __proto__: Object
+    2: Object
+    temp: "69"
+    time: "12:45"
+    __proto__: Object
+andthere a boatload of functions to manipulate it and its display. Strong candidate for an Object with member functions.    
+    
+Moved away from using JQuery and delved further into CSS3 for creating buttons and widgets. Everything works better. 
+=====Javascript=====
+=====nth children=====
+<syntaxhighlight>
+    $(".prog-tes li").click(function() {
+        time=$(':nth-child(2)', $(this)).html();
+        temp=($(':nth-child(3)', $(this)).html()).substring(0,2);
+        alert(temp+"clicked it "+time);
+    });	
+</syntaxhighlight>
+=====javascript array.push(newval);=====
+
+=====$(this)[0];//same as getElementById=====
+=====dataset data-mydata=====
+  ddd=$(this)[0];//same as getElementById
+  dow = ddd.dataset.dow;
+
+=====$(document).on('pageshow', '#aroom', function (e) {=====
+Use when you have programmatically changed page and now need to do somethin on that page
+
+=====scroll to anchor=====
+<syntaxhighlight>
+    if(anc.length>0){
+        $('html, body').animate({
+            scrollTop: $(anc).offset().top-95
+        }, 1000);  
+        anc=""; 	
+    }
+</syntaxhighlight>
+=====CSS=====
+If styling isn't getting picked up specify the hell out of the selector. - .prog-day div.day2 li, .prog-time div.prog-time-box li{
+
+====version F: CSS3 and media queries====
+:col1, col2, col3 do wahht they should
+:just cloumn 1a is working in terms of element layout
+
+====version E: write schedule progs to database====
+:PUT request to /prog/80302/ver/      multiple ckts and multiple days for those ckts
+:PUT request to /prog/80302/ver/99/5, multiple ckts for day 5
+:PUT request to /prog/80302/ver/4/,   multiple days for ckt 4
+:PUT request to /prog/80302/ver/4/5,  day4 for ckt 5
+
+remembering the flow from the case:put case:feed arduino loop is 
+* getTodayLTEnow()
+* ckHolds($db, $req); //(calls updateSetptArr())
+* $se = getSetptArr($db, $path);
+* echo $se; //sends it to arduino
+* zeroSetptArr($db, $path);	
+Work on, from app end, routines and interface for writing programs
+
+The structure of prog data is {"feed":"80302","ckts":[[{"time":"9:30","setpt":"147"},null,null,null,null,null,{"time":"9:30","setpt":"147"}],null,null,null,null,null,null,null,null,null,null,[{"time":"9:30","setpt":"147"},null,null,null,null,null,{"time":"9:30","setpt":"147"}]]} and it is roughed out in comments at bottom of ha.js
+
+
+====version-D prog data and hold data ====
+ACTUALLY: didn't touch getTodayLTEnow()
+*added a RewriteRule boho /var/www/hsc/index.php?id=$1	in defauls sites
+*worked on hold.php driven from .button-boost and .button.setpt (data structures are the same {"feed":"80302","ckt":4,"start":1363707975,"finish":1363688100,"setpt":167})
+*worked on release as DELETErequest inhad  deleteHold.php wcase:delete:case:boho callinging existing method in index.php called delHold()
+
+PLANNED: Will be combining dialog for boost and hold. Working to have /feed do the following extra tasks
+    getTodayLTEnow(); //(calls updateSetptArr())
+    ckHolds($db, $req); //(calls updateSetptArr())
+    $se = getSetptArr($db, $path);
+    echo $se; //sends it to arduino
+    zeroSetptArr($db, $path);	
+
+Have been using the dialog pages as test pages for moving prog data and hold data through system.
+:post of new program data (was getting tested boost-yes button )
+<syntaxhighlight>
+//{"feed":"80302","ckts":[[{"time":"9:30","setpt":"147"},null,null,null,null,null,{"time":"9:30","setpt":"147"}],null,null,null,null,null,null,null,null,null,null,[{"time":"9:30","setpt":"147"},null,null,null,null,null,{"time":"9:30","setpt":"147"}]]}
+    schedJ =JSON.stringify(sched);
+    console.log(schedJ);
+    console.log(ckt.length);
+    console.log(sched.ckts[11]==null);
+    console.log(sched.ckts[11][7]==null);
+    $.post("../services/newProg.php", {data: schedJ}).done(function(data){
+            alert("Data Loaded: " + data);
+</syntaxhighlight>
+::this data tracks through newProg.php and then to http://198.23.156.78/hsc/prog/80302 as a a JSON post string
+:post of new hold/boost entry (was getting tested in hold-yes button)
+<syntaxhighlight>
+    $(".hold-yes").click(function() {	
+        console.log("clicked hold-yes");		
+        holdS='{"feed":"80302","ckt":99,"start":1363707975,"finish":1364000000,"setpt":140}';
+        holdArr = JSON.parse(holdS);
+        holdStr =JSON.stringify(holdArr);
+        console.log(holdArr);
+        $.post("../services/hold.php", {data: holdStr}).done(function(data){
+            alert("Data Loaded: " + data);
+        });
+        return false;
+    });		
+</syntaxhighlight>
+
+{{:header-menu}}
+
+====system versions -arduino+server code====
+=====version C - /hsc/index.php /services/putSetptArr.php =====
+Cron calls have to build the data into the URL so they will look like:
+ http://homecontrol.sitebuilt.net/services/putSetpt.php?feed=80302&type=prog&sensor=6&setpt=167
+Not a PUT but in Curl it gets converted for the rest api as a PUT with data encoded  
+ $bdata=json_encode($data);   
+ curl_setopt($ch, CURLOPT_POSTFIELDS,$bdata);
+ http://198.23.156.78/hsc/prog/80302/4
+:$req = RestUtils::processRequest()- index.php starts with this. The request object has...
+::$path =$req->getPathArr()-  path[0]=hsc(the db name), path[1]=80303=2(the feed id), path[3]=sensor#
+::$data=$req->getData() - rest.api finds the data depending on PUT GET POST etc setpt=167
+Index.php looks at PUT||GET||POST, feed||prog, and sensor||noSensor to determine what to do.
+
+:updateSetptArr($db, $path, $data); - appends to setPtArr one value	
+when PUT/feed/ fires it first grabs any new setpts from the db, then echo's it back to the Arduino and then zero's it out. 				
+ $se = getSetptArr($db, $path);
+ echo $se;
+ zeroSetptArr($db, $path);
+
+getHttpHeaders() holds hidden stuff like apikey and that stuff gets set here:
+
+ curl_setopt($ch, CURLOPT_HTTPHEADER, array( 
+   "Accept: json",
+   "HTTP/1.1 Host: api.cosm.com",
+   "X-ApiKey:  xxxxxxjxjndjjxn",
+   "User-Agent: sitebuilt Arduino Example (83080)" ));  
+        
+=====version C - hsc-run: C code - no more String class, everything indexed on MAXCKTS, new setpts in (simple)<JSONarray> =====
 :setup() starts the serial monitor and ethernet then reads from memory an array of sensor id's (char lu[MAXCKTS][9]), the numckts and an array of setpts[MAXCKTS] where 12 is MAXCKTS. It then assigns an array of pins as outputs (to relays not yet arrived from China)  
 
 :The main loop() begins zipping along taking in a character of incoming data on each loop and printing it to the serial monitor while grabbing characters if they come between < and > and storing them in a character array cdata[]
@@ -12,4 +180,117 @@
     setRelays(); 
     assembleData();
     sendData(); 
-    lastConnectionTime = millis(); 
+    lastConnectionTime = millis();  
+
+Next: only record to db if temp changes
+:in c://Users/tim/Documents/tech/electronics/Arduino/hsc_run.ino
+:in c://Users/tim/Documents/tech/electronics/Arduino/hsc_setup.ino
+:in c://Users/tim/Documents/tech/electronics/Arduino/hsc_readSetup.ino
+
+=====<s>version B - no more String class, missing readings retain order</s>===== 
+
+=====version A - mega as server sending to ReSt API and client receiving new setpts=====
+in c://Users/tim/Documents/tech/electronics/Arduino/thermoc.ino
+
+====bits and pieces====
+=====version 6=====
+Moving things to 10.0.1.101 but first set up api framework there<br/>
+Added rewrite rules in /etc/apache2/sites-available/default by following beginner [http://www.sitepoint.com/apache-mod_rewrite-examples/ link]
+<syntaxhighlight>
+<Directory /var/www/hsc>
+    RewriteEngine On
+    RewriteRule feed/([0-9]+) /var/www/hsc/index.php?id=$1
+    RewriteRule feeds /var/www/hsc/index.php
+    RewriteRule datastreams /var/www/hsc/index.php?id=$1	
+    RewriteRule prog /var/www/hsc/index.php?id=$1		
+    RewriteRule progs /var/www/hsc/index.php?id=$1		
+</Directory>
+</syntaxhighlight>
+Test code to parse url
+<syntaxhighlight>
+<?php
+echo("hi dog <br/> ");
+print_r($_SERVER['REQUEST_URI']);
+echo "<br/>";
+$urlarr = (parse_url($_SERVER['REQUEST_URI']));
+echo "<br/>";
+print_r($_GET);
+echo "<br/>";
+print_r($urlarr);
+echo "<br/>";
+$pathstr=($urlarr["path"]);
+echo $pathstr;
+echo "<br/>";
+print_r(explode("/", $pathstr));
+?>
+</syntaxhighlight>
+
+=====version 3=====
+:[[php www-data program that creates a crontab and calls a C program that executes root commands to copy it into crontabs and install it]]
+
+:write a php file that PUTS some light on on the AVR
+
+:collect data from AVR and store it in mysql
+:view the saved data on a client using javascript
+====code working on arduino==== 
+=====versions now use both arduino and php code so new versions sill be listed under [[#system versions -arduino+server code]]=====
+
+=====version 5=====
+=====raw DS18B20 to server, convert and send back to serial monitor=====
+Uploaded to Arduino is [https://github.com/mckennatim/arduino/blob/master/hsc_tempJSONphp/hsc_tempJSONphp.ino hsc_tempJSONphp.ino] Raw data is sent by arduino to /var/www/feeds/getnoise.php which puts it in an object and then creates another object containing F converted sensor readings for data coming off ONEWIRE connected sensors. Then it sends that data back.
+
+Trying to convert to float on the Arduino wasn't working. Why push it? I've got unlimited power on LAMP server.
+
+=====version 4 - temp readings beyond serial monitor=====
+======version 4a - [[DS18B20 readings to JSON]]======
+======version 4b - [[JSON from arduino to PHP server]]======
+:a) separate out a function to provide a reading to send to cosm for pin 0(14) and 1(15)
+:1 one possibility - send to cosm. This is better than having a webclient like thermometer.ino. Get it to Cosm and then later set up an api like cosm
+
+=====version 3 - onewire demo=====
+Put sample code in function getTemp(). Subsequent calls of the function don't reset the device counter. this is good.
+
+http://sitebuilt.net/images/DS18B20wiring.PNG
+
+On serial monitor running [https://raw.github.com/mckennatim/arduino/master/DS18x20_Temperature/DS18x20_Temperature.ino DS18x20_Temperature.ino] ala [http://www.pjrc.com/teensy/td_libs_OneWire.html the library here]. Of note: How it polls each device:
+<syntaxhighlight>
+  if ( !ds.search(addr)) {//this is where it loops to the next address
+    Serial.println("No more addresses.");
+    Serial.println();
+    ds.reset_search();//if there are no more devices go back to start of list
+    delay(250);
+    return;
+  }
+</syntaxhighlight>
+
+=====version 2=====
+:Online thermometer creating web page in which you call for the data by clicking a button. Uses design from [http://www.freetronics.com/pages/online-thermometer#.UOt3dm_2GSo Practical Arduino] in /tim/Documents/electronics/arduino/thermometer[https://raw.github.com/mckennatim/arduino/master/thermometer/thermometer.ino thermometer.ino] and it runs at http://10.0.1.79
+
+=====version 1=====
+:Take random readings from analog pins start an etehrnet client that sends them out to http://cosm.com (mcktimo 6j) every ten seconds :[https://raw.github.com/mckennatim/arduino/master/cosmtest/cosmtest.ino comtest.ino]
+
+====final narrative====
+An Avr takes in temperature readings from multiple locations. At the control room the AVR hub polls temperature and for each zone knows the set temperature, the default temperature and whether or not a zone is ON and how long it has been on. If it doesn't hear from the (linux) scheduler then it falls back to act as a multi-zone thermostat set at the default temperatures. Through a rudimentary display it would allow you to set temperatures for each zone. 
+
+The scheduler would take temperature data from the AVR client and would know the schedule. Whenever a schedule change point would come up, it would notify the AVR and instruct it to change the set point. It would do this via chrontab maybe.  
+
+The controller would on the client probably an HTML5/javascript client. Here you can read the temperatures and view the schedule. You can override or change the schedule.
+
+====possible routes====
+A cheap circuit like http://www.craig.copperleife.com/tech/thermo/ or more complicated http://www.rentron.com/project01.htm using http://datasheets.maximintegrated.com/en/ds/DS1620.pdf which can be overridden by server program that controls multiple thermostats.
+
+{{:ReST}}
+
+====Cron Jobs====
+:[[Hudsonvalley#cron_and_backups]]
+:http://net.tutsplus.com/tutorials/php/managing-cron-jobs-with-php-2/
+:http://stackoverflow.com/questions/4421020/use-php-to-create-edit-and-delete-crontab-jobs
+
+====parts====
+[http://openenergymonitor.org/emon/buildingblocks/DS18B20-temperature-sensing on one wire problems]
+
+[http://www.maximintegrated.com/app-notes/index.mvp/id/148 guidelines for relaiable 1 wire networks]
+
+=====[http://www.maximintegrated.com/datasheet/index.mvp/id/2735 DS1620 Digital Thermometer and Thermostat]=====
+In a [http://www.rentron.com/project01.htm thermostat circuit] $2.20 for dip
+{{:DS18B20 Maxim 1-wire temperature sensors}}
