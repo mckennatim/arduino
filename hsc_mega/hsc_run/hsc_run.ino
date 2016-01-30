@@ -14,7 +14,7 @@ byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 IPAddress ip(10,0,1,79);//<<< ENTER YOUR IP ADDRESS HERE!!!
 EthernetServer server(7777);
 EthernetClient client;
-IPAddress cosmserver(198,23,156,78);    // numeric IP for api.cosm.com
+IPAddress cosmserver(198,23,253,29);    // numeric IP for api.cosm.com
 unsigned long lastConnectionTime = 0; // last time you connected to the server, in millis
 boolean lastConnected = false; // state of the connection last time through the main loop
 const unsigned long postingInterval = 20*1000; //delay between updates to Cosm.com
